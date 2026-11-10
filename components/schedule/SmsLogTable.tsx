@@ -108,8 +108,9 @@ export default function SmsLogTable({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const { confirm, confirmation } = useConfirmation();
-  // Tracks the last auto-filled draft so a custom message is never overwritten.
-  const autoDraft = useRef('');
+  // Each message type keeps its own draft, so switching types swaps the
+  // matching template while edits made under a type are remembered.
+  const typeDrafts = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -285,14 +286,14 @@ export default function SmsLogTable({
               value={type}
               onChange={(e) => {
                 const next = e.target.value as typeof type;
+                const prevKey = type === 'all' ? 'general' : type;
+                const nextKey = next === 'all' ? 'general' : next;
+                typeDrafts.current[prevKey] = message;
+                const draft = typeDrafts.current[nextKey] || broadcastTemplate(nextKey, centerLabel);
+                typeDrafts.current[nextKey] = draft;
+                setMessage(draft);
                 setType(next);
                 setCurrentPage(1);
-                const draft = broadcastTemplate(next === 'all' ? 'general' : next, centerLabel);
-                setMessage((current) => {
-                  if (current.trim() && current !== autoDraft.current) return current;
-                  autoDraft.current = draft;
-                  return draft;
-                });
               }}
               options={[
                 { value: 'all', label: 'All Types' },

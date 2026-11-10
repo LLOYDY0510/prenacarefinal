@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { persistRememberPreference } from '@/utils/auth/session-persistence';
 import { createClient } from '@/utils/supabase/client';
 import PasswordInput from '@/components/auth/PasswordInput';
-import { Mail, ShieldCheck, Phone, FileText } from 'lucide-react';
+import { Mail, ShieldCheck, Phone, FileText, User } from 'lucide-react';
 
 type Status = 'idle' | 'creating';
 
@@ -14,6 +14,7 @@ export default function CreateAccountForm() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,6 +31,10 @@ export default function CreateAccountForm() {
     setError('');
     setNotice('');
 
+    if (!fullName.trim()) {
+      setError('Full name is required.');
+      return;
+    }
     if (!email.trim()) {
       setError('Email is required.');
       return;
@@ -50,25 +55,54 @@ export default function CreateAccountForm() {
     setStatus('creating');
 
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
+      // Confirm the record exists before creating the account, so a typo does
+      // not leave an orphan account behind.
+      const verifyResponse = await fetch('/api/account/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serialNo: serialNo.trim(), contactNumber: contactNumber.trim() }),
       });
-
-      if (signUpError) {
-        setError(signUpError.message);
+      const verifyResult = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok) {
+        setError(verifyResult.error ?? 'Your record could not be checked. Please try again.');
+        setStatus('idle');
+        return;
+      }
+      if (!verifyResult.found) {
+        setError('No matching record was found. Please double-check your Serial Number and Contact Number, or contact your BHW for help.');
         setStatus('idle');
         return;
       }
 
-      if (!signUpData.session) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { data: { full_name: fullName.trim() } },
+      });
+
+      if (signUpError) {
+        // The email may already have an account (e.g. she registered before or
+        // confirmed her email). Fall back to signing in so she can still link
+        // her record instead of hitting a dead end.
+        const { error: existingSignInError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (existingSignInError) {
+          setError(signUpError.message);
+          setStatus('idle');
+          return;
+        }
+      }
+
+      if (!signUpError && !signUpData?.session) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password,
         });
         if (signInError) {
           setNotice(
-            'Your account was created. Please confirm your email address, then ask your BHW or midwife to link your prenatal record.',
+            'Your account was created. Please confirm your email address, then submit this form again with the same details to link your record.',
           );
           setStatus('idle');
           return;
@@ -119,6 +153,26 @@ export default function CreateAccountForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div>
+          <label className="form-label" htmlFor="create-full-name">
+            Full Name
+          </label>
+          <div className="relative flex items-center">
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+            <input
+              id="create-full-name"
+              name="fullName"
+              type="text"
+              autoComplete="name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              className="w-full h-11 pl-11 pr-4 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white border border-neutral-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-neutral-800 placeholder:text-neutral-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+              placeholder="Your full name"
+              required
+            />
+          </div>
+        </div>
+
         <div>
           <label className="form-label" htmlFor="create-email">
             Email Address
