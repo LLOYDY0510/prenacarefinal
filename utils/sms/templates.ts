@@ -8,17 +8,17 @@
 
 import { smsCenterLabel } from './center';
 
-const HIGH_RISK_NOTE = 'Mataas po ang inyong risk — mahalaga ang bawat prenatal checkup.';
+const HIGH_RISK_NOTE = 'Taas kaayo ang inyong risk — importante ang matag prenatal check-up.';
 
 export function prenatalReminderMessage(visitDate: string, timeLabel?: string | null, highRisk = false): string {
   const when = timeLabel?.trim() ? ` (${timeLabel.trim()})` : '';
-  const base = `Paalala: Bukas (${visitDate})${when} po ang inyong prenatal checkup sa ${smsCenterLabel()}. Mangyaring pumunta sa nakatakdang oras.`;
+  const base = `Paalala: Bubtad (${visitDate})${when} ang inyong prenatal check-up sa ${smsCenterLabel()}. Palihug tangtanga sa takdang oras.`;
   return highRisk ? `${base} ${HIGH_RISK_NOTE} Salamat!` : `${base} Salamat!`;
 }
 
 export function prenatalReminderMessageToday(visitDate: string, timeLabel?: string | null, highRisk = false): string {
   const when = timeLabel?.trim() ? ` (${timeLabel.trim()})` : '';
-  const base = `Paalala: Ngayong araw (${visitDate})${when} po ang inyong prenatal checkup sa ${smsCenterLabel()}. Mangyaring pumunta sa nakatakdang oras.`;
+  const base = `Paalala: Karong adlawa (${visitDate})${when} ang inyong prenatal check-up sa ${smsCenterLabel()}. Palihug tangtanga sa takdang oras.`;
   return highRisk ? `${base} ${HIGH_RISK_NOTE} Salamat!` : `${base} Salamat!`;
 }
 
@@ -31,8 +31,38 @@ export function scheduleConfirmationMessage(visitDate: string, trimester: string
 }
 
 export function missedVisitMessage(visitDate: string, highRisk = false): string {
-  const base = `Paalala: Hindi kayo nakadalo sa prenatal visit noong ${visitDate}. Mangyaring pumunta sa ${smsCenterLabel()} sa pinakamabalanggang panahon para sa follow-up schedule.`;
+  const base = `Paalala: Wala kay nakadalo sa prenatal visit kaniadtong ${visitDate}. Palihug balik sa ${smsCenterLabel()} sa Pinakaulahi para sa follow-up schedule.`;
   return highRisk ? `${base} ${HIGH_RISK_NOTE} Salamat!` : `${base} Salamat!`;
+}
+
+/**
+ * Starter copy for the Broadcast Dispatch composer, matched to the selected
+ * message type. [Ngalan] and [Petsa] are filled per recipient on the server
+ * from the mother's record, so staff never type names or dates by hand.
+ */
+export function broadcastTemplate(messageType: string, center: string): string {
+  switch (messageType) {
+    case 'prenatal_reminder':
+      return `Maayong adlaw, [Ngalan]! Ang ${center} kini. Pahinumdom lang nga ang imong sunod nga prenatal check-up kay sa [Petsa]. Ayaw kalimot sa pag-adto sa health center sa maong petsa aron masusi ang imong kahimtang ug ang kahimtang sa imong baby. Amping kanunay!`;
+    case 'missed_visit_follow_up':
+      return `Maayong adlaw, [Ngalan]! Ang ${center} kini. Among namatikdan nga wala ka nakaadto sa imong gitakdang prenatal check-up niadtong [Petsa]. Gihangyo ka namo nga mo-adto sa among health center sulod sa oras sa among serbisyo aron makapahimo sa imong prenatal check-up. Importante ang imong kahimsog ug ang kahimsog sa imong baby. Salamat!`;
+    case 'risk_alert':
+      return `Maayong adlaw, [Ngalan]! Ang ${center} kini. Base sa imong kataposang pagsusi, gikinahanglan nga mobalik ka sa health center aron masusi pag-usab ang imong kahimtang. Palihug pakigkita sa among midwife sa.labing dali nga panahon alang sa dugang nga pagsusi ug tambag. Amping kanunay!`;
+    case 'general':
+      return `Maayong adlaw, [Ngalan]! Ang ${center} kini. Adunay pahinumdom kami kanimo nga ampingan kanunay ang imong panglawas ug ayaw kalimot sa regular nga pagpacheck-up. Kung adunay mga pangutana o kabalaka, mahimo kang moduol sa among health center. Salamat!`;
+    default:
+      return '';
+  }
+}
+
+/** Replaces the [Ngalan] and [Petsa] placeholders in a broadcast draft. */
+export function fillBroadcastPlaceholders(
+  message: string,
+  vars: { name?: string | null; date?: string | null },
+): string {
+  return message
+    .replaceAll('[Ngalan]', vars.name?.trim() || 'kaigsuonan')
+    .replaceAll('[Petsa]', vars.date?.trim() || 'among gitakdang petsa');
 }
 
 /** Semaphore counts characters; a 10-part message is the common PH plan. */

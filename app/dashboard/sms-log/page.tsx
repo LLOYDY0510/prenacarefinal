@@ -4,6 +4,7 @@ import SmsLogTable, { type SmsLogRow, type SmsRecipient } from '@/components/sch
 import { createAdminClient } from '@/utils/supabase/admin';
 import { requireRoles } from '@/utils/auth/roles';
 import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
+import { smsCenterLabel } from '@/utils/sms/center';
 import PageHeader from '@/components/ui/PageHeader';
 import { Send } from 'lucide-react';
 import SmsGatewaySettingsCard from '@/components/schedule/SmsGatewaySettingsCard';
@@ -167,7 +168,7 @@ export default async function SmsLogPage() {
 
       <SmsGatewaySettingsCard />
       {(logsError||receiptsError||mothersError||sendersError||followUpsError||checkupsError)&&<p role="alert" className="error-message">The complete SMS history could not be loaded. Refresh and try again.</p>}
-      <SmsLogTable logs={rows} recipients={recipients} />
+      <SmsLogTable logs={rows} recipients={recipients} centerLabel={smsCenterLabel()} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
 
-import { Fragment, useState, useMemo, useEffect } from 'react';
+import { Fragment, useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 import { Select, Textarea } from '@/components/ui/Input';
@@ -12,6 +12,7 @@ import SectionHeading from '@/components/ui/SectionHeading';
 import { useConfirmation } from '@/components/ui/useConfirmation';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { friendlySmsError, DryRunBadge } from '@/components/schedule/smsStatusUi';
+import { broadcastTemplate } from '@/utils/sms/templates';
 import RiskBadge from '@/components/ui/RiskBadge';
 import { Send, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
@@ -84,9 +85,11 @@ type SendResult = {
 export default function SmsLogTable({
   logs,
   recipients,
+  centerLabel = 'Barangay Health Center',
 }: {
   logs: SmsLogRow[];
   recipients: SmsRecipient[];
+  centerLabel?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -105,6 +108,8 @@ export default function SmsLogTable({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const { confirm, confirmation } = useConfirmation();
+  // Tracks the last auto-filled draft so a custom message is never overwritten.
+  const autoDraft = useRef('');
 
   useEffect(() => {
     let cancelled = false;
@@ -278,7 +283,17 @@ export default function SmsLogTable({
           <div className="w-48">
             <Select
               value={type}
-              onChange={(e) => { setType(e.target.value as typeof type); setCurrentPage(1); }}
+              onChange={(e) => {
+                const next = e.target.value as typeof type;
+                setType(next);
+                setCurrentPage(1);
+                const draft = broadcastTemplate(next === 'all' ? 'general' : next, centerLabel);
+                setMessage((current) => {
+                  if (current.trim() && current !== autoDraft.current) return current;
+                  autoDraft.current = draft;
+                  return draft;
+                });
+              }}
               options={[
                 { value: 'all', label: 'All Types' },
                 ...(Object.keys(TYPE_LABELS) as SmsLogRow['message_type'][])
@@ -360,6 +375,9 @@ export default function SmsLogTable({
               rows={3}
               maxLength={480}
             />
+            <p className="text-[11px] font-medium text-neutral-500 -mt-3">
+              Tips: ang <code>[Ngalan]</code> ug <code>[Petsa]</code> mo-fill na gyud per mother gikan sa ilang records — dili na nimo kinahanglanon i-type.
+            </p>
 
             <div className="flex flex-wrap items-center gap-3">
               <Button
