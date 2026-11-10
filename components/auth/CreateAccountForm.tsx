@@ -126,6 +126,14 @@ export default function CreateAccountForm() {
         return;
       }
 
+      if (result.accountStatus && result.accountStatus !== 'active') {
+        setNotice(
+          'Na-link na ang imong record! Ang account nimo kay pending na — ang midwife o BHW mo-activate dayon. Mahimo nimong i-sign in human ma-activate.',
+        );
+        setStatus('idle');
+        return;
+      }
+
       router.push('/dashboard');
       router.refresh();
     } catch {

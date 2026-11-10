@@ -96,7 +96,11 @@ export async function POST(req: NextRequest) {
     if (profileError) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
-    return NextResponse.json({ success: !!profile, role: 'patient' });
+    return NextResponse.json({
+      success: !!profile,
+      role: 'patient',
+      accountStatus: (profile as { account_status?: string } | null)?.account_status ?? null,
+    });
   } catch (err) {
     console.error('Account link error:', err);
     return NextResponse.json(
