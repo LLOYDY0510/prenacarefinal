@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentProfile } from '@/utils/auth/roles';
+import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
 import Sidebar from '@/components/layout/Sidebar';
 import SessionPersistenceGuard from '@/components/auth/SessionPersistenceGuard';
 
@@ -14,6 +15,9 @@ export default async function DashboardLayout({children,modal}: {children: React
   const {user,profile} = await getCurrentProfile();
   if (!user) redirect('/login');
   const active = profile?.account_status === 'active';
+  // Automatic prenatal reminders and missed-visit follow-ups run on dashboard
+  // traffic; the job serialises concurrent callers and dedupes per schedule.
+  if (active) void checkAndSendPrenatalReminders();
   const menuItems = (active ? MENUS[profile.role ?? ''] ?? [] : []).map(([label,path]) => ({label,href: '/dashboard'+(path ? '/'+path : '')}));
   return <><SessionPersistenceGuard/><Sidebar role={profile?.role ?? 'patient'} fullName={profile?.full_name} email={user.email} notifications={[]} menuItems={menuItems}>{children}{modal}</Sidebar></>;
 }
