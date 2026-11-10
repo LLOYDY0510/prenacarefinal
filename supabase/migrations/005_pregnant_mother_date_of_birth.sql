@@ -1,0 +1,2 @@
+-- This migration is disabled because the actual database schema doesn't have date_of_birth column
+-- on public.pregnant_mothers(date_of_birth);

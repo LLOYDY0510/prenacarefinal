@@ -1,0 +1,3 @@
+-- This migration is disabled because the actual database schema doesn't have date_of_birth column
+-- The system uses the age field directly instead
+-- If date_of_birth is needed in the future, it should be added via Supabase dashboard first
