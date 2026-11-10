@@ -249,7 +249,7 @@ export default function ScheduleEditor({
         />
 
         {eligibilityError && <p role="alert" className="error-message">{eligibilityError}</p>}
-        {ready && <p className="text-sm text-neutral-600">{eligibility.total} eligible mothers · {eligibility.needsReview} records need pregnancy-date review.</p>}
+        {ready && <p className="text-sm text-neutral-600">{eligibility.total} eligible mothers for this visit.</p>}
 
         {selectedMothersList.length > 0 && (
           <div className="space-y-2 bg-green-50/50 p-4 rounded-2xl border border-green-100">

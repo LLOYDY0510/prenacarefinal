@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { toE164 } from '@/utils/sms/phone';
 
 type LinkBody = {
   serialNo?: unknown;
@@ -49,16 +50,20 @@ export async function POST(req: NextRequest) {
     }
 
 
-    const { data: mother, error: motherError } = await adminClient
+    // Serial match is case-insensitive; the contact number is compared in
+    // E.164 form so "0917..." matches a stored "+63917...".
+    const enteredPhone = toE164(contactNumber);
+    const { data: candidates, error: motherError } = await adminClient
       .from('pregnant_mothers')
-      .select('id, full_name')
-      .eq('serial_no', serialNo)
-      .eq('contact_number', contactNumber)
-      .maybeSingle();
+      .select('id, full_name, contact_number')
+      .ilike('serial_no', serialNo);
 
     if (motherError) {
       return NextResponse.json({ error: motherError.message }, { status: 500 });
     }
+    const mother = (candidates ?? []).find(
+      (row) => enteredPhone !== null && toE164(row.contact_number as string | null) === enteredPhone,
+    );
     if (!mother) {
       return NextResponse.json(
         {
